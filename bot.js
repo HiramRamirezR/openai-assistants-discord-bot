@@ -103,7 +103,7 @@ client.on('messageCreate', async message => {
 
     const messages = await openai.beta.threads.messages.list(openAiThreadId);
     let response = messages.data[0].content[0].text.value;
-    response = response.substring(0, 1999) //Discord msg length limit when I was testing
+    response = response.substring(0, 1000) //Discord msg length limit
 
     console.log(response);
     
