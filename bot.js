@@ -63,7 +63,7 @@ const addMessage = (threadId, content) => {
 // This event will run every time a message is received
 client.on('messageCreate', async message => {
     if (message.author.bot || !message.content || message.content === '') return; //Ignore bot messages
-    // console.log(message);
+    console.log(message.content);
     const discordThreadId = message.channel.id;
     let openAiThreadId = getOpenAiThreadId(discordThreadId);
 
