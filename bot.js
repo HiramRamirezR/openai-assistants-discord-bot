@@ -45,15 +45,16 @@ const statusCheckLoop = async (openAiThreadId, runId) => {
 
     if(terminalStates.indexOf(run.status) < 0){
         await sleep(1000);
+        console.log("Sleeping...");
+        console.log(`Run status: ${run.status}`);
         return statusCheckLoop(openAiThreadId, runId);
     }
-    // console.log(run);
+    console.log('Run:', JSON.stringify(run, null, 2));
 
     return run.status;
 }
 
 const addMessage = (threadId, content) => {
-    // console.log(content);
     return openai.beta.threads.messages.create(
         threadId,
         { role: "user", content }
@@ -64,6 +65,7 @@ const addMessage = (threadId, content) => {
 client.on('messageCreate', async message => {
     if (message.author.bot || !message.content || message.content === '') return; //Ignore bot messages
     console.log(message.content);
+    console.log('ThreadMap:', JSON.stringify(threadMap, null, 2));
     const discordThreadId = message.channel.id;
     let openAiThreadId = getOpenAiThreadId(discordThreadId);
 
