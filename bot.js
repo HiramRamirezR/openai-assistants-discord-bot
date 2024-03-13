@@ -63,6 +63,7 @@ const addMessage = (threadId, content) => {
 
 // This event will run every time a message is received
 client.on('messageCreate', async message => {
+    if (message.system) return;
     if (message.author.bot || !message.content || message.content === '') return; //Ignore bot messages
 
     // Manejar la solicitud de manera asíncrona
@@ -129,6 +130,27 @@ const processRequest = async (openAiThreadId, messageContent) => {
 
     return response;
 }
+
+// Evento que se activa cuando se actualiza un hilo
+client.on('threadUpdate', (oldThread, newThread) => {
+    // Verifica si el nombre del hilo ha cambiado
+    if (oldThread.name !== newThread.name) {
+        // Obtiene el ID del hilo de Discord
+        const discordThreadId = oldThread.id;
+        
+        // Busca el ID del hilo de OpenAI en el threadMap
+        const openAiThreadId = getOpenAiThreadId(discordThreadId);
+        
+        // Si el hilo existe en el threadMap, actualiza su ID de OpenAI
+        if (openAiThreadId) {
+            // Elimina la entrada antigua del threadMap
+            delete threadMap[discordThreadId];
+            
+            // Crea una nueva entrada con el nuevo nombre del hilo
+            threadMap[newThread.id] = openAiThreadId;
+        }
+    }
+});
 
 // Authenticate Discord
 client.login(process.env.DISCORD_TOKEN);
