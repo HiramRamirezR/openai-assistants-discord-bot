@@ -49,7 +49,8 @@ const statusCheckLoop = async (openAiThreadId, runId) => {
         console.log(`Run status: ${run.status}`);
         return statusCheckLoop(openAiThreadId, runId);
     }
-    console.log('Run:', JSON.stringify(run, null, 2));
+    // console.log('Run:', JSON.stringify(run, null, 2));
+    console.dir(run, { depth: null, colors: true });
 
     return run.status;
 }
