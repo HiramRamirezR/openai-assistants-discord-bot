@@ -92,20 +92,25 @@ const handleMessage = async (message) => {
         const discordThreadId = message.channel.id;
         let openAiThreadId = getOpenAiThreadId(discordThreadId);
 
-        if(!openAiThreadId){
+        if (!openAiThreadId) {
             const thread = await openai.beta.threads.create();
             openAiThreadId = thread.id;
             addThreadToMap(discordThreadId, openAiThreadId);
 
             await addMessage(openAiThreadId, message.content);
-        } 
+        }
 
         // Crear un nuevo hilo en Discord a partir de la respuesta inicial
         const response = await processRequest(openAiThreadId, message.content);
         const replyMessage = await message.reply(response);
-        const discordThread = await replyMessage.startThread();
-        addThreadToMap(discordThread.id, openAiThreadId);
 
+        // Verificar si se puede crear un hilo a partir de este mensaje
+        if (replyMessage.channelId && replyMessage.channel.isTextBased()) {
+            const discordThread = await replyMessage.startThread();
+            addThreadToMap(discordThread.id, openAiThreadId);
+        } else {
+            console.error('No se puede crear un hilo a partir de este mensaje.');
+        }
     } catch (error) {
         console.error('Error al procesar la solicitud:', error);
         // Manejar el error de manera adecuada
