@@ -27,7 +27,6 @@ client.once('ready', () => {
 const threadMap = {};
 
 const getOpenAiThreadId = (discordThreadId) => {
-    // Replace this in-memory implementation with a database (e.g. DynamoDB, Firestore, Redis)
     return threadMap[discordThreadId];
 }
 
@@ -66,8 +65,23 @@ client.on('messageCreate', async message => {
     if (message.system) return;
     if (message.author.bot || !message.content || message.content === '') return; //Ignore bot messages
 
-    // Manejar la solicitud de manera asíncrona
-    handleMessage(message);
+    // Verificar si el mensaje proviene de un hilo
+    if (message.channel.isThread()) {
+        // Verificar si el bot fue mencionado
+        if (message.mentions.has(client.user)) {
+            // El bot fue mencionado en un hilo, manejar la solicitud
+            handleMessage(message);
+        } else {
+            // El mensaje proviene de un hilo existente
+            const discordThreadId = message.channel.id;
+            const openAiThreadId = getOpenAiThreadId(discordThreadId);
+            if (openAiThreadId) {
+                await addMessage(openAiThreadId, message.content);
+                const response = await processRequest(openAiThreadId, message.content);
+                await message.reply(response);
+            }
+        }
+    }
 });
 
 const handleMessage = async (message) => {
@@ -77,39 +91,21 @@ const handleMessage = async (message) => {
 
         const discordThreadId = message.channel.id;
         let openAiThreadId = getOpenAiThreadId(discordThreadId);
-        let messagesLoaded = false;
 
         if(!openAiThreadId){
             const thread = await openai.beta.threads.create();
             openAiThreadId = thread.id;
             addThreadToMap(discordThreadId, openAiThreadId);
 
-            if(message.channel.isThread()){
-                //Gather all thread messages to fill out the OpenAI thread since we haven't seen this one yet
-                const starterMsg = await message.channel.fetchStarterMessage();
-                const otherMessagesRaw = await message.channel.messages.fetch();
-                const otherMessages = Array.from(otherMessagesRaw.values())
-                    .map(msg => msg.content)
-                    .reverse(); //oldest first
-
-                const messages = [starterMsg.content, ...otherMessages]
-                    .filter(msg => !!msg && msg !== '')
-
-                // console.log(messages);
-                await Promise.all(messages.map(msg => addMessage(openAiThreadId, msg)));
-                messagesLoaded = true;
-            }
-        }
-
-        if(!messagesLoaded){ //If this is for a thread, assume msg was loaded via .fetch() earlier
             await addMessage(openAiThreadId, message.content);
-        }
+        } 
 
-        // Procesar la solicitud de manera asíncrona
+        // Crear un nuevo hilo en Discord a partir de la respuesta inicial
         const response = await processRequest(openAiThreadId, message.content);
+        const replyMessage = await message.reply(response);
+        const discordThread = await replyMessage.startThread();
+        addThreadToMap(discordThread.id, openAiThreadId);
 
-        // Enviar la respuesta
-        message.reply(response);
     } catch (error) {
         console.error('Error al procesar la solicitud:', error);
         // Manejar el error de manera adecuada
